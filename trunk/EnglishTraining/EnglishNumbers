@@ -1,0 +1,207 @@
+#!/bin/bash
+
+rightAnswers=0
+wrongAnswers=0
+rootDir='/home/amg1127/.wine/drive_c/Arquivos de programas/CCAD/soundclips'
+playSpeed=${1:-1}
+
+one2nineteenCardinal () {
+    case "${1}" in
+    1)
+        echo "one"
+        ;;
+    2)
+        echo "two"
+        ;;
+    3)
+        echo "three"
+        ;;
+    4)
+        echo "four"
+        ;;
+    5)
+        echo "five"
+        ;;
+    6)
+        echo "six"
+        ;;
+    7)
+        echo "seven"
+        ;;
+    8)
+        echo "eight"
+        ;;
+    9)
+        echo "nine"
+        ;;
+    10)
+        echo "ten"
+        ;;
+    11)
+        echo "eleven"
+        ;;
+    12)
+        echo "twelve"
+        ;;
+    13)
+        echo "thirteen"
+        ;;
+    15)
+        echo "fifteen"
+        ;;
+    18)
+        echo "eighteen"
+        ;;
+    1[4-9])
+        echo "`one2nineteenCardinal \"${1:1:1}\"`teen"
+        ;;
+    *)
+        return 1
+        ;;
+    esac
+}
+
+one2nineteenOrdinal () {
+    case "${1}" in
+    1)
+        echo "first"
+        ;;
+    2)
+        echo "second"
+        ;;
+    3)
+        echo "third"
+        ;;
+    5)
+        echo "fifth"
+        ;;
+    8)
+        echo "eighth"
+        ;;
+    9)
+        echo "ninth"
+        ;;
+    12)
+        echo "twelfth"
+        ;;
+    [1-9]|1[0-9])
+        echo "`one2nineteenCardinal \"${1}\"`th"
+        ;;
+    *)
+        return 1
+        ;;
+    esac
+}
+
+twenty2ninetyCardinal () {
+    case "${1}" in
+    2)
+        echo "twenty"
+        ;;
+    3)
+        echo "thirty"
+        ;;
+    4)
+        echo "forty"
+        ;;
+    5)
+        echo "fifty"
+        ;;
+    6)
+        echo "sixty"
+        ;;
+    7)
+        echo "seventy"
+        ;;
+    8)
+        echo "eighty"
+        ;;
+    9)
+        echo "ninety"
+        ;;
+    *)
+        return 1
+        ;;
+    esac
+}
+
+twenty2ninetyOrdinal () {
+    twenty2ninetyCardinal "${1}" | sed -r 's/y$/ieth/'
+}
+
+listNumberFiles () {
+    local number="${1}"
+    local ordinal="${2}"
+    local numberFileList=""
+    local ten=""
+    if [ "${number}" -ge 100 ]; then
+        numberFileList="`one2nineteenCardinal $((number/100))`.mp3"
+        number=$((number%100))
+        if [ "${number}" -gt 0 -o "${ordinal}" -eq 0 ]; then
+            numberFileList="${numberFileList} hundred.mp3"
+        else
+            numberFileList="${numberFileList} hundredth.mp3"
+        fi
+    fi
+    if [ "${number}" -ge 20 ]; then
+        ten=$((number/10))
+        number=$((number%10))
+        if [ "${number}" -gt 0 -o "${ordinal}" -eq 0 ]; then
+            numberFileList="${numberFileList} `twenty2ninetyCardinal \"${ten}\"`.mp3"
+        else
+            numberFileList="${numberFileList} `twenty2ninetyOrdinal \"${ten}\"`.mp3"
+        fi
+    fi
+    if [ "${number}" -gt 0 ]; then
+        if [ "${ordinal}" -eq 0 ]; then
+            numberFileList="${numberFileList} `one2nineteenCardinal \"${number}\"`.mp3"
+        else
+            numberFileList="${numberFileList} `one2nineteenOrdinal \"${number}\"`.mp3"
+        fi
+    fi
+    if [ "x${numberFileList}" != "x" ]; then
+        echo "${numberFileList}"
+    else
+        return 1
+    fi
+}
+
+while true; do
+    number=$(((RANDOM*32768+RANDOM)%100000))
+    ordinal=$((RANDOM%2))
+    thousand=$((number/1000))
+    remain=$((number%1000))
+    fileList=""
+    if [ "${number}" -eq 0 ]; then
+        fileList="nought.mp3"
+    else
+        if [ "${thousand}" -gt 0 ]; then
+            fileList="`listNumberFiles ${thousand} 0`"
+            if [ "${remain}" -gt 0 -o "${ordinal}" -eq 0 ]; then
+                fileList="${fileList} thousand.mp3"
+            else
+                fileList="${fileList} thousandth.mp3"
+            fi
+        fi
+        if [ "${remain}" -gt 0 ]; then
+            fileList="${fileList} `listNumberFiles ${remain} ${ordinal}`"
+        fi
+    fi
+    echo "Answers: ${rightAnswers} correct and ${wrongAnswers} wrong."
+    sleep 2
+    echo -ne '\nType the answer: '
+    ( cd "${rootDir}" && mplayer -af scaletempo -speed "${playSpeed}" ${fileList} ) < /dev/null > /dev/null 2>&1
+    read numberAnswer
+    if [ "${ordinal}" -ne 0 ]; then
+        number="${number}`echo -n \"${fileList}\" | sed -r 's/^.*(..)\.mp3[[:space:]]*$/\1/'`"
+    fi
+    if echo "${numberAnswer}" | egrep -qi "^[[:space:]]*${number}[[:space:]]*\$"; then
+        echo ' * CORRECT! * '
+        rightAnswers=$((rightAnswers+1))
+    else
+        echo ' **** !!! WRONG !!! ****'
+        echo " The actual number is: '${number}'."
+        wrongAnswers=$((wrongAnswers+1))
+    fi
+    mplayer "${fileList}" < /dev/null > /dev/null 2>&1
+done
