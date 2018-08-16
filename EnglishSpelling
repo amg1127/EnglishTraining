@@ -1,0 +1,42 @@
+#!/bin/bash
+
+rightAnswers=0
+wrongAnswers=0
+rootDir='/home/amg1127/.wine/drive_c/Arquivos de programas/CCAD/soundclips'
+playSpeed=${1:-1}
+
+( find "${rootDir}" -maxdepth 1 -type f -iname '??*.mp3' | sort -R | while read file; do
+    word="`basename \"${file}\" '.mp3'`"
+    ( echo "${word}" | egrep -qi '^[a-z][a-z]+$' ) || continue
+    wordSpaces="`echo \"${word}\" | sed -r 's/./\0 /g'`"
+    fileList=""
+    for letter in ${wordSpaces}; do
+        lcLetter="`echo \"${letter}\" | tr A-Z a-z`"
+        ucLetter="`echo \"${letter}\" | tr a-z A-Z`"
+        if [ -f "${rootDir}/${lcLetter}.mp3" ]; then
+            fileList="${fileList} ${lcLetter}.mp3"
+        elif [ -f "${rootDir}/${ucLetter}.mp3" ]; then
+            fileList="${fileList} ${ucLetter}.mp3"
+        else
+            fileList=""
+            break
+        fi
+    done
+    if [ "x${fileList}" != "x" ]; then
+        echo "Answers: ${rightAnswers} correct and ${wrongAnswers} wrong."
+        sleep 2
+        echo -ne '\nType the answer: '
+        ( cd "${rootDir}" && mplayer -af scaletempo -speed "${playSpeed}" ${fileList} ) < /dev/null > /dev/null 2>&1
+        read -u 5 wordAnswer
+        if echo "${wordAnswer}" | egrep -qi "^[[:space:]]*${word}[[:space:]]*\$"; then
+            echo ' * CORRECT! * '
+            rightAnswers=$((rightAnswers+1))
+        else
+            echo ' **** !!! WRONG !!! ****'
+            echo " The actual word is: '${word}'."
+            wrongAnswers=$((wrongAnswers+1))
+        fi
+        mplayer "${file}" < /dev/null > /dev/null 2>&1
+        ( cd "${rootDir}" && mplayer ${fileList} ) < /dev/null > /dev/null 2>&1
+    fi
+done ) 5<&1
