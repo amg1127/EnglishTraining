@@ -4,6 +4,7 @@ rightAnswers=0
 wrongAnswers=0
 rootDir='/home/amg1127/.wine/drive_c/Arquivos de programas/CCAD/soundclips'
 playSpeed=${1:-1}
+extension='wav'
 
 ( find "${rootDir}" -maxdepth 1 -type f -iname '??*.mp3' | sort -R | while read file; do
     word="`basename \"${file}\" '.mp3'`"
@@ -13,10 +14,10 @@ playSpeed=${1:-1}
     for letter in ${wordSpaces}; do
         lcLetter="`echo \"${letter}\" | tr A-Z a-z`"
         ucLetter="`echo \"${letter}\" | tr a-z A-Z`"
-        if [ -f "${rootDir}/${lcLetter}.mp3" ]; then
-            fileList="${fileList} ${lcLetter}.mp3"
-        elif [ -f "${rootDir}/${ucLetter}.mp3" ]; then
-            fileList="${fileList} ${ucLetter}.mp3"
+        if [ -f "${rootDir}/${lcLetter}.${extension}" ]; then
+            fileList="${fileList} ${lcLetter}.${extension}"
+        elif [ -f "${rootDir}/${ucLetter}.${extension}" ]; then
+            fileList="${fileList} ${ucLetter}.${extension}"
         else
             fileList=""
             break
@@ -37,6 +38,6 @@ playSpeed=${1:-1}
             wrongAnswers=$((wrongAnswers+1))
         fi
         mplayer "${file}" < /dev/null > /dev/null 2>&1
-        ( cd "${rootDir}" && mplayer ${fileList} ) < /dev/null > /dev/null 2>&1
+        ( cd "${rootDir}" && mplayer -af scaletempo -speed "${playSpeed}" ${fileList} ) < /dev/null > /dev/null 2>&1
     fi
 done ) 5<&1
